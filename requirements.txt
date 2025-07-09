@@ -4,7 +4,6 @@ uvicorn[standard]==0.24.0
 
 # Database
 sqlalchemy==2.0.23
-sqlite3  # Built into Python
 
 # HTTP Requests
 requests==2.31.0

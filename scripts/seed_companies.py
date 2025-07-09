@@ -11,6 +11,7 @@ from datetime import datetime
 backend_dir = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(backend_dir))
 
+# Now the imports should work
 from database import DatabaseManager, Filing, FilingSection
 from config import COMPANIES_FILE
 from services.sec_client import SECClient
@@ -119,13 +120,13 @@ def parse_downloaded_filings():
     print("🔍 Parsing downloaded HTML files...")
     
     from services.parser import FilingParser
-    
+
     with DatabaseManager() as db:
         # Get all filings that have HTML files but haven't been processed
-        filings = db.db.query(db.db.query(Filing).filter(
+        filings = db.db.query(Filing).filter(
             Filing.html_file_path.isnot(None),
             Filing.processed == False
-        ).all())
+        ).all()
         
         for filing in filings:
             try:

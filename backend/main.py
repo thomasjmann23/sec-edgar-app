@@ -245,9 +245,9 @@ async def get_company_filings(
 @app.post("/companies/{company_id}/sync")
 async def sync_company_filings(
     company_id: int,
+    background_tasks: BackgroundTasks,
     form_type: str = Query("10-K"),
     download_html: bool = Query(False),
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """Sync latest filings for a company"""
