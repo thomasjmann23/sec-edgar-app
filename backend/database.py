@@ -65,12 +65,19 @@ class Filing(Base):
     processed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+    xbrl_file_path = Column(String(500))  # Path to XBRL instance document
+    filing_summary_path = Column(String(500))  # Path to FilingSummary.xml
+    has_xbrl = Column(Boolean, default=False)
+    xbrl_processed = Column(Boolean, default=False)    
+
     # Relationships
     company = relationship("Company", back_populates="filings")
     sections = relationship("FilingSection", back_populates="filing")
     analyses = relationship("Analysis", back_populates="filing")
-    
+    xbrl_facts = relationship("XBRLFact", back_populates="filing")
+    financial_statements = relationship("FinancialStatement", back_populates="filing")
+
+
     def __repr__(self):
         return f"<Filing(form_type='{self.form_type}', filing_date='{self.filing_date}', company_id={self.company_id})>"
     
@@ -294,6 +301,109 @@ class DatabaseManager:
             query = query.filter(Filing.form_type == form_type)
         
         return query.order_by(Filing.filing_date.desc()).limit(limit).all()
+
+class XBRLFact(Base):
+    """XBRL fact with full context"""
+    __tablename__ = "xbrl_facts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    filing_id = Column(Integer, ForeignKey("filings.id"), nullable=False)
+    
+    # XBRL-specific fields
+    concept_name = Column(String(200), nullable=False, index=True)
+    concept_label = Column(String(500))
+    namespace = Column(String(200))
+    
+    # Value and data type
+    value = Column(Text)  # Store as text, convert as needed
+    data_type = Column(String(50))  # monetary, shares, pure, text, etc.
+    unit_ref = Column(String(50))  # USD, shares, etc.
+    
+    # Context information
+    period_start = Column(DateTime)
+    period_end = Column(DateTime)
+    period_instant = Column(DateTime)
+    entity_identifier = Column(String(50))
+    
+    # Dimensions (for segment reporting)
+    dimensions = Column(Text)  # JSON string of dimension values
+    
+    # Metadata
+    decimals = Column(Integer)
+    scale = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    filing = relationship("Filing", back_populates="xbrl_facts")
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "filing_id": self.filing_id,
+            "concept_name": self.concept_name,
+            "concept_label": self.concept_label,
+            "value": self.value,
+            "data_type": self.data_type,
+            "unit_ref": self.unit_ref,
+            "period_start": self.period_start.isoformat() if self.period_start else None,
+            "period_end": self.period_end.isoformat() if self.period_end else None,
+            "period_instant": self.period_instant.isoformat() if self.period_instant else None,
+            "dimensions": json.loads(self.dimensions) if self.dimensions else None
+        }
+
+class XBRLConcept(Base):
+    """XBRL concept definitions for mapping"""
+    __tablename__ = "xbrl_concepts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    concept_name = Column(String(200), unique=True, nullable=False, index=True)
+    standard_name = Column(String(200), index=True)  # Standardized concept name
+    label = Column(String(500))
+    definition = Column(Text)
+    data_type = Column(String(50))
+    period_type = Column(String(20))  # instant, duration
+    balance_type = Column(String(20))  # debit, credit
+    
+    # Taxonomy information
+    namespace = Column(String(200))
+    taxonomy_version = Column(String(50))
+    
+    # Hierarchical relationships
+    parent_concept = Column(String(200))
+    concept_category = Column(String(100))  # Assets, Liabilities, Revenue, etc.
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class FinancialStatement(Base):
+    """Standardized financial statement structure"""
+    __tablename__ = "financial_statements"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    filing_id = Column(Integer, ForeignKey("filings.id"), nullable=False)
+    
+    statement_type = Column(String(50), nullable=False)  # balance_sheet, income_statement, etc.
+    period_start = Column(DateTime)
+    period_end = Column(DateTime)
+    period_instant = Column(DateTime)
+    
+    # Standardized financial metrics (store as JSON)
+    metrics = Column(Text)  # JSON with standardized financial data
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    filing = relationship("Filing", back_populates="financial_statements")
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "filing_id": self.filing_id,
+            "statement_type": self.statement_type,
+            "period_start": self.period_start.isoformat() if self.period_start else None,
+            "period_end": self.period_end.isoformat() if self.period_end else None,
+            "period_instant": self.period_instant.isoformat() if self.period_instant else None,
+            "metrics": json.loads(self.metrics) if self.metrics else None
+        }
 
 # Initialize database on import
 if __name__ == "__main__":

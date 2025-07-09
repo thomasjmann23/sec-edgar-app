@@ -340,6 +340,85 @@ class SECClient:
         cutoff_date = datetime.now().date() - timedelta(days=days)
         return filing_info.filing_date >= cutoff_date
 
+    def download_xbrl_for_filing(self, filing_info: FilingInfo, save_dir: Path = None) -> Optional[str]:
+        """
+        Simple method to download XBRL file for a filing
+        
+        Args:
+            filing_info: FilingInfo object
+            save_dir: Directory to save the file
+            
+        Returns:
+            Path to downloaded XBRL file or None if failed
+        """
+        if save_dir is None:
+            save_dir = FILINGS_DIR
+        
+        try:
+            # Get all documents for this filing
+            documents = self.get_filing_documents(filing_info)
+            
+            # Look for XBRL instance document
+            xbrl_doc = None
+            for doc in documents:
+                # Look for common XBRL file indicators
+                if (doc['type'].lower() == 'ex-101.ins' or 
+                    'instance' in doc['description'].lower() or
+                    doc['url'].endswith('.xml')):
+                    xbrl_doc = doc
+                    break
+            
+            if not xbrl_doc:
+                logger.warning(f"No XBRL document found for filing {filing_info.accession_number}")
+                return None
+            
+            # Download the XBRL file
+            response = self._make_request(xbrl_doc['url'])
+            
+            # Create filename
+            filename = f"{filing_info.cik}_{filing_info.accession_number}_instance.xml"
+            file_path = save_dir / filename
+            
+            # Save the file
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(response.text)
+            
+            logger.info(f"Downloaded XBRL file to {file_path}")
+            return str(file_path)
+            
+        except Exception as e:
+            logger.error(f"Failed to download XBRL file: {e}")
+            return None
+
+    def check_filing_has_xbrl(self, filing_info: FilingInfo) -> bool:
+        """
+        Check if a filing has XBRL data available
+        
+        Args:
+            filing_info: FilingInfo object
+            
+        Returns:
+            True if XBRL data is available
+        """
+        try:
+            documents = self.get_filing_documents(filing_info)
+            
+            # Look for XBRL indicators
+            for doc in documents:
+                if (doc['type'].lower() == 'ex-101.ins' or 
+                    'instance' in doc['description'].lower() or
+                    'xbrl' in doc['description'].lower()):
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Failed to check XBRL availability: {e}")
+            return False
+    
+
+
+
 # Utility functions
 def format_cik(cik: str) -> str:
     """Format CIK to standard 10-digit format"""
@@ -357,3 +436,4 @@ def extract_cik_from_url(url: str) -> Optional[str]:
     """Extract CIK from SEC URL"""
     cik_match = re.search(r'CIK=(\d+)', url)
     return cik_match.group(1) if cik_match else None
+
