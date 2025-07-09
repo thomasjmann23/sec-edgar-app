@@ -1,47 +1,41 @@
-# Web Framework
+# Core Web Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 
 # Database
 sqlalchemy==2.0.23
 
-# HTTP Requests
+# HTTP Requests & SEC API
 requests==2.31.0
 httpx==0.25.2
 
-# HTML/XML Parsing
+# HTML/XML Parsing (Core functionality)
 beautifulsoup4==4.12.2
 lxml==4.9.3
 
-# Data Processing
+# Basic Data Processing
 pandas==2.1.4
-numpy==1.24.4
 
-# AI/ML
+# AI/ML (Only for analysis, not parsing)
 google-generativeai==0.3.2
 
-# Environment Management
+# Configuration & Environment
 python-dotenv==1.0.0
-
-# Date/Time Handling
 python-dateutil==2.8.2
-
-# JSON/Data Handling
 pydantic==2.5.0
 
-# CORS (for frontend)
+# CORS (for frontend integration)
 fastapi-cors==0.0.1
 
-# Testing (optional)
+# Development & Testing (Optional)
 pytest==7.4.3
 pytest-asyncio==0.21.1
-
-# Development Tools
 black==23.11.0
 flake8==6.1.0
 
-# XBRL Processing
-sentence-transformers==2.2.2
-chromadb==0.4.22
-arelle==2.3
-python-xbrl==1.1.1
+# Removed packages (no longer needed):
+# - sentence-transformers (was for vector embeddings)
+# - chromadb (was for vector database)
+# - arelle (was for XBRL processing)
+# - python-xbrl (was for XBRL processing)
+# - numpy (pandas includes what we need)
